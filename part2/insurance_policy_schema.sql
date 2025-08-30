@@ -1,4 +1,4 @@
---- This SQL script creates the 'insurance_policies' table if it doesn't exist.
+-- This SQL script creates the 'insurance_policies' table if it doesn't exist.
 -- Run this script on your PostgreSQL database before inserting data.
 -- Adjust column types or constraints as needed.
 
@@ -13,9 +13,16 @@ CREATE TABLE IF NOT EXISTS insurance_policies (
     treaty_sum_insured DOUBLE PRECISION,
     treaty_premium DOUBLE PRECISION,
     insurance_period_start_date DATE,
-    insurance_period_end_date DATE
+    insurance_period_end_date DATE,
+    vector_id VARCHAR(100)
 );
+-- Add the vector_id column if it doesn't already exist
+ALTER TABLE insurance_policies
+ADD COLUMN IF NOT EXISTS vector_id VARCHAR(36);  -- UUIDs are 36 characters
 
--- Optional: Add primary key or indexes if needed
--- ALTER TABLE insurance_policies ADD PRIMARY KEY (policy_number);
--- CREATE INDEX idx_start_date ON insurance_policies (insurance_period_start_date);
+-- Optional: Add index for faster lookups
+CREATE INDEX IF NOT EXISTS idx_vector_id ON insurance_policies (vector_id);
+
+-- Optional: If you want to ensure uniqueness
+ALTER TABLE insurance_policies
+ADD CONSTRAINT unique_vector_id UNIQUE (vector_id);
