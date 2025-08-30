@@ -2,13 +2,18 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.utils.data_processing import transform_excel_data
+from src.utils.validation import validate_excel_file, validate_insurance_data
+from fastapi import HTTPException
 import logging
 
 logger = logging.getLogger(__name__)
 
-async def ingest_excel_data(session: AsyncSession, file_content: bytes):
+async def ingest_excel_data(session: AsyncSession, file_content: bytes, filename: str):
     """Process and ingest Excel data into database"""
     try:
+        # Validate Excel file
+        validate_excel_file(file_content, filename)
+        
         # Read Excel file
         df = pd.read_excel(file_content, sheet_name=None)
         
@@ -16,6 +21,9 @@ async def ingest_excel_data(session: AsyncSession, file_content: bytes):
         all_data = []
         for sheet_name, sheet_data in df.items():
             if sheet_name.startswith('data_'):
+                # Validate data structure
+                validate_insurance_data(sheet_data)
+                
                 # Clean and transform data
                 transformed = transform_excel_data(sheet_data)
                 all_data.append(transformed)
@@ -69,4 +77,4 @@ async def ingest_excel_data(session: AsyncSession, file_content: bytes):
     except Exception as e:
         await session.rollback()
         logger.error(f"Error ingesting data: {str(e)}")
-        raise
+        raise HTTPException(status_code=500, detail="Error ingesting data")

@@ -31,9 +31,9 @@ app.add_middleware(
 security = HTTPBasic()
 
 def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = credentials.username == settings.API_USER
-    correct_password = credentials.password == settings.API_PASS
-    
+    correct_username = credentials.username == settings.API_USERNAME
+    correct_password = credentials.password == settings.API_PASSWORD
+
     if not (correct_username and correct_password):
         raise HTTPException(
             status_code=401,

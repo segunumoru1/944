@@ -1,0 +1,60 @@
+# Python & env
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+.env
+.venv/
+venv/
+ENV/
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments and IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Tests / coverage / caches
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+.mypy_cache/
+
+# Distribution / build
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+
+# Database / local data / logs
+*.sqlite3
+*.db
+*.log
+data/
+tmp/
+*.tmp
+
+# Git / Docker / OS
+.git
+.gitignore
+Dockerfile
+docker-compose*.yml
+
+# Secrets / keys / credentials
+credentials/
+secrets/
+*.pem
+*.key
+
+# Large files you don't want in image (adjust as needed)
+*.xlsx
+*.csv

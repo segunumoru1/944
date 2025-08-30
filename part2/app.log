@@ -837,3 +837,6 @@ For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/er
         
 2025-08-30 22:24:07,627 [INFO] [generated in 0.00744s] ()
 2025-08-30 22:24:08,274 [INFO] ROLLBACK
+2025-08-30 23:49:31,208 [ERROR] Query processing error: InsuranceRAGSystem.__init__() takes 1 positional argument but 2 were given
+2025-08-31 00:03:18,182 [ERROR] Query processing error: InsuranceRAGSystem.__init__() takes 1 positional argument but 2 were given
+2025-08-31 00:07:00,371 [ERROR] Query processing error: InsuranceRAGSystem.__init__() takes 1 positional argument but 2 were given
