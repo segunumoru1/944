@@ -1,0 +1,35 @@
+# --- API Layer ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# --- Excel Parsing ---
+pandas==2.2.3
+openpyxl==3.1.5
+xlrd==2.0.1  # for legacy Excel support
+
+# --- Database (SQL) ---
+SQLAlchemy==2.0.35
+psycopg2-binary==2.9.9
+psycopg2==2.9.10
+alembic==1.13.2  # migrations
+
+# --- Embeddings ---
+google-generativeai==0.8.3  # Gemini embeddings
+# Alternatively: openai==1.46.0  (if OpenAI embeddings are preferred)
+
+# --- Vector Database (Pinecone) ---
+pinecone-client==4.1.0
+
+# --- Monitoring & Logging ---
+prometheus-client==0.21.0
+loguru==0.7.2
+
+# --- Authentication / Security ---
+python-jose==3.3.0
+passlib[bcrypt]==1.7.4
+
+# --- Utilities ---
+httpx==0.27.2   # async HTTP calls / retries
+python-dotenv==1.0.1
+pydantic==2.8.0  # data validation
+asyncio==3.11.4
