@@ -11,6 +11,5 @@ tests/
 =======
 .venv/
 __pycache__/
-.env
 .venv
 tests/
