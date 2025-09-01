@@ -10,9 +10,12 @@ class InsurancePolicyBase(BaseModel):
     own_retention_ppn: float
     own_retention_sum_insured: float
     own_retention_premium: float
-    treaty_ppn: float
+    treaty_ppn: float  # Renamed from treaty_retention_ppn
     treaty_sum_insured: float
     treaty_premium: float
+    facultative_outward_ppn: Optional[float] = None
+    facultative_outward_sum_insured: Optional[float] = None
+    facultative_outward_premium: Optional[float] = None
     insurance_period_start_date: datetime
     insurance_period_end_date: datetime
 

@@ -5,6 +5,7 @@ from src.utils.data_processing import transform_excel_data
 from src.utils.validation import validate_excel_file, validate_insurance_data
 from fastapi import HTTPException
 import logging
+from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
@@ -14,67 +15,93 @@ async def ingest_excel_data(session: AsyncSession, file_content: bytes, filename
         # Validate Excel file
         validate_excel_file(file_content, filename)
         
-        # Read Excel file
-        df = pd.read_excel(file_content, sheet_name=None)
+        # Use BytesIO to handle file content
+        file_io = BytesIO(file_content)
         
-        # Process each sheet
-        all_data = []
-        for sheet_name, sheet_data in df.items():
-            if sheet_name.startswith('data_'):
-                # Validate data structure
-                validate_insurance_data(sheet_data)
-                
-                # Clean and transform data
-                transformed = transform_excel_data(sheet_data)
-                all_data.append(transformed)
+        # Read Excel sheets - header at row 7 (0-indexed)
+        dfs = {}
+        excel_file = pd.ExcelFile(file_io)
+        for sheet in excel_file.sheet_names:
+            dfs[sheet] = pd.read_excel(excel_file, sheet_name=sheet, header=0)
         
         # Combine all sheets
-        combined_df = pd.concat(all_data, ignore_index=True)
+        df_combined = pd.concat(dfs.values(), ignore_index=True)
         
-        # Insert into database
-        for _, row in combined_df.iterrows():
-            insert_stmt = text("""
-                INSERT INTO insurance_policies 
-                (policy_number, sum_insured, premium, own_retention_ppn, 
-                 own_retention_sum_insured, own_retention_premium, treaty_ppn,
-                 treaty_sum_insured, treaty_premium, insurance_period_start_date, 
-                 insurance_period_end_date)
-                VALUES 
-                (:policy_number, :sum_insured, :premium, :own_retention_ppn,
-                 :own_retention_sum_insured, :own_retention_premium, :treaty_ppn,
-                 :treaty_sum_insured, :treaty_premium, :insurance_period_start_date,
-                 :insurance_period_end_date)
-                ON CONFLICT (policy_number) DO UPDATE SET
-                sum_insured = EXCLUDED.sum_insured,
-                premium = EXCLUDED.premium,
-                own_retention_ppn = EXCLUDED.own_retention_ppn,
-                own_retention_sum_insured = EXCLUDED.own_retention_sum_insured,
-                own_retention_premium = EXCLUDED.own_retention_premium,
-                treaty_ppn = EXCLUDED.treaty_ppn,
-                treaty_sum_insured = EXCLUDED.treaty_sum_insured,
-                treaty_premium = EXCLUDED.treaty_premium,
-                insurance_period_start_date = EXCLUDED.insurance_period_start_date,
-                insurance_period_end_date = EXCLUDED.insurance_period_end_date
-            """)
+        # Column mapping - Excel column names to database column names
+        column_mapping = {
+            "INSURED": "insured_name",
+            "POLICY NUMBER": "policy_number",
+            "PERIOD OF INSURANCE": "insurance_period",
+            "SUM INSURED": "sum_insured",
+            "PREMIUM": "premium",
+            "OWN RETENTION PPN": "own_retention_ppn",
+            "OWN RETENTION SUM INSURED": "own_retention_sum_insured", 
+            "OWN RETENTION PREMIUM": "own_retention_premium",
+            "TREATY PPN": "treaty_retention_ppn",
+            "TREATY SUM INSURED": "treaty_sum_insured",
+            "TREATY PREMIUM": "treaty_premium",
+            "FACULTATIVE OUTWARD PPN": "facultative_outward_ppn",
+            "FACULTATIVE OUTWARD SUM INSURED": "facultative_outward_sum_insured",
+            "FACULTATIVE OUTWARD PREMIUM": "facultative_outward_premium"
+        }
+        
+        # Rename columns based on mapping
+        df_combined.rename(columns=column_mapping, inplace=True)
+        
+        # Process insurance period field
+        if "insurance_period" in df_combined.columns:
+            # Split period into start and end dates
+            df_combined[['insurance_period_start_date', 'insurance_period_end_date']] = df_combined['insurance_period'].str.split(' - ', expand=True)
             
-            await session.execute(insert_stmt, {
-                "policy_number": row.get("policy_number"),
-                "sum_insured": row.get("sum_insured"),
-                "premium": row.get("premium"),
-                "own_retention_ppn": row.get("own_retention_ppn"),
-                "own_retention_sum_insured": row.get("own_retention_sum_insured"),
-                "own_retention_premium": row.get("own_retention_premium"),
-                "treaty_ppn": row.get("treaty_ppn"),
-                "treaty_sum_insured": row.get("treaty_sum_insured"),
-                "treaty_premium": row.get("treaty_premium"),
-                "insurance_period_start_date": row.get("insurance_period_start_date"),
-                "insurance_period_end_date": row.get("insurance_period_end_date")
-            })
+            # Convert to datetime
+            df_combined['insurance_period_start_date'] = pd.to_datetime(df_combined['insurance_period_start_date'], format='%d/%m/%Y')
+            df_combined['insurance_period_end_date'] = pd.to_datetime(df_combined['insurance_period_end_date'], format='%d/%m/%Y')
+            
+            # Drop original period column
+            df_combined.drop('insurance_period', axis=1, inplace=True)
+        
+        # Check if required columns exist in table before inserting
+        # First, check database table structure
+        table_structure_query = text("SELECT column_name FROM information_schema.columns WHERE table_name = 'insurance_policies'")
+        result = await session.execute(table_structure_query)
+        existing_columns = [row[0] for row in result.all()]
+        
+        logger.info(f"Existing columns in database: {existing_columns}")
+        
+        # Build insert statement dynamically based on existing columns
+        columns_to_insert = []
+        placeholders = []
+        update_statements = []
+        params = {}
+        
+        # Add columns that exist in both dataframe and database
+        for idx, row in df_combined.iterrows():
+            row_params = {}
+            for col in df_combined.columns:
+                if col in existing_columns:
+                    if idx == 0:  # Only add column name and placeholder once
+                        columns_to_insert.append(col)
+                        placeholders.append(f":{col}")
+                        update_statements.append(f"{col} = EXCLUDED.{col}")
+                    row_params[col] = row.get(col)
+            
+            # Construct and execute insert statement
+            if columns_to_insert:
+                insert_stmt = text(f"""
+                    INSERT INTO insurance_policies 
+                    ({', '.join(columns_to_insert)})
+                    VALUES 
+                    ({', '.join(placeholders)})
+                    ON CONFLICT (policy_number) DO UPDATE SET
+                    {', '.join(update_statements)}
+                """)
+                
+                await session.execute(insert_stmt, row_params)
         
         await session.commit()
-        return {"message": "Data ingested successfully", "records_processed": len(combined_df)}
-    
+        return {"message": "Data ingested successfully", "records_processed": len(df_combined)}
+        
     except Exception as e:
         await session.rollback()
         logger.error(f"Error ingesting data: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error ingesting data")
+        raise HTTPException(status_code=500, detail=f"Error ingesting data: {str(e)}")

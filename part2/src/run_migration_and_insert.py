@@ -8,14 +8,18 @@ MIGRATION_STATEMENTS = [
     """
     CREATE TABLE IF NOT EXISTS insurance_policies (
         policy_number VARCHAR(255),
+        insured_name VARCHAR(255),
         sum_insured DOUBLE PRECISION,
         premium DOUBLE PRECISION,
         own_retention_ppn DOUBLE PRECISION,
         own_retention_sum_insured DOUBLE PRECISION,
         own_retention_premium DOUBLE PRECISION,
-        treaty_retention_ppn DOUBLE PRECISION,
+        treaty_ppn DOUBLE PRECISION,
         treaty_sum_insured DOUBLE PRECISION,
         treaty_premium DOUBLE PRECISION,
+        facultative_outward_ppn DOUBLE PRECISION,
+        facultative_outward_sum_insured DOUBLE PRECISION,
+        facultative_outward_premium DOUBLE PRECISION,
         insurance_period_start_date DATE,
         insurance_period_end_date DATE,
         vector_id VARCHAR(36)
@@ -79,14 +83,18 @@ try:
             'insurance_period_end_date': Date(),
             'vector_id': String(length=36),
             'policy_number': String(length=255),
+            'insured_name': String(length=255),
             'sum_insured': Float(precision=53),
             'premium': Float(precision=53),
             'own_retention_ppn': Float(precision=53),
             'own_retention_sum_insured': Float(precision=53),
             'own_retention_premium': Float(precision=53),
-            'treaty_retention_ppn': Float(precision=53),
+            'treaty_ppn': Float(precision=53),
             'treaty_sum_insured': Float(precision=53),
-            'treaty_premium': Float(precision=53)
+            'treaty_premium': Float(precision=53),
+            'facultative_outward_ppn': Float(precision=53),
+            'facultative_outward_sum_insured': Float(precision=53),
+            'facultative_outward_premium': Float(precision=53)
         }
     )
     print("Data inserted successfully!")

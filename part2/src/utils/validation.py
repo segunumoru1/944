@@ -3,18 +3,18 @@ import re
 from datetime import datetime
 from fastapi import HTTPException
 import logging
+from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
 def validate_excel_file(file_content: bytes, filename: str):
-    """Validate Excel file structure and content"""
-    # Check file extension
-    if not filename.endswith(('.xlsx', '.xls')):
-        raise HTTPException(400, "Only Excel files (.xlsx, .xls) are supported")
+    """Validate that the uploaded file is a valid Excel file"""
+    if not filename.endswith(('.xls', '.xlsx')):
+        raise ValueError("File must be an Excel file (.xls or .xlsx)")
     
+    # Use BytesIO to handle bytes content properly
     try:
-        # Try to read the Excel file
-        excel_data = pd.ExcelFile(file_content)
+        excel_data = pd.ExcelFile(BytesIO(file_content))
         
         # Check if required sheets exist
         required_sheets = ['data_1', 'data_2', 'data_3']
@@ -30,8 +30,28 @@ def validate_excel_file(file_content: bytes, filename: str):
         logger.error(f"Excel validation error: {str(e)}")
         raise HTTPException(400, f"Invalid Excel file: {str(e)}")
 
-def validate_insurance_data(df: pd.DataFrame):
+def validate_insurance_data(df_or_file):
     """Validate insurance data against required schema"""
+    
+    # If input is file content, convert to DataFrame
+    if not isinstance(df_or_file, pd.DataFrame):
+        if isinstance(df_or_file, bytes):
+            excel_data = pd.ExcelFile(BytesIO(df_or_file))
+        else:
+            excel_data = pd.ExcelFile(df_or_file)
+        
+        sheet_names = excel_data.sheet_names
+        df_list = []
+        
+        for sheet in sheet_names:
+            df_sheet = pd.read_excel(excel_data, sheet_name=sheet, header=7)
+            df_list.append(df_sheet)
+            
+        df = pd.concat(df_list, ignore_index=True)
+    else:
+        df = df_or_file
+    
+    # Define required columns with data types
     required_columns = {
         "policy_number": "string",
         "sum_insured": "float",
@@ -39,24 +59,41 @@ def validate_insurance_data(df: pd.DataFrame):
         "own_retention_ppn": "float",
         "own_retention_sum_insured": "float",
         "own_retention_premium": "float",
-        "treaty_ppn": "float",
+        "treaty_retention_ppn": "float",  # Match what's in the CSV for now
         "treaty_sum_insured": "float",
-        "treaty_premium": "float",
-        "insurance_period": "string"
+        "treaty_premium": "float"
     }
     
-    # Check for required columns
-    missing_columns = [col for col in required_columns.keys() if col not in df.columns]
+    # Check for missing required columns
+    missing_columns = []
+    for col in required_columns:
+        if col not in df.columns:
+            if col == "treaty_retention_ppn" and "treaty_ppn" in df.columns:
+                # Rename to match expected schema
+                df["treaty_retention_ppn"] = df["treaty_ppn"]
+            else:
+                missing_columns.append(col)
+    
+    # Add missing columns with default values
+    if "insured_name" not in df.columns:
+        df["insured_name"] = "Unknown"
+    
+    for col in ["facultative_outward_ppn", "facultative_outward_sum_insured", 
+                "facultative_outward_premium"]:
+        if col not in df.columns:
+            df[col] = 0.0
+    
+    # Handle insurance period dates
+    if "insurance_period" in df.columns:
+        df[['insurance_period_start_date', 'insurance_period_end_date']] = df['insurance_period'].str.split(' - ', expand=True)
+        df['insurance_period_start_date'] = pd.to_datetime(df['insurance_period_start_date'])
+        df['insurance_period_end_date'] = pd.to_datetime(df['insurance_period_end_date'])
+    
+    # Final check for any remaining missing columns
     if missing_columns:
-        raise HTTPException(400, f"Missing required columns: {', '.join(missing_columns)}")
+        raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
     
-    # Validate data types
-    for column, expected_type in required_columns.items():
-        if column in df.columns:
-            if expected_type == "float" and not pd.api.types.is_numeric_dtype(df[column]):
-                raise HTTPException(400, f"Column {column} must contain numeric values")
-    
-    return True
+    return df
 
 def sanitize_input(input_string: str):
     """Sanitize user input to prevent injection attacks"""

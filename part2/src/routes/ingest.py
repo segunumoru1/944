@@ -20,14 +20,14 @@ async def ingest_excel(
     """
     try:
         # Validate file type
-        if not file.filename.endswith(('.xlsx', '.xls')):
+        if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
             raise HTTPException(400, "Only Excel files are supported")
         
         # Read file content
         content = await file.read()
         
         # Process and ingest data
-        result = await ingest_excel_data(db, content)
+        result = await ingest_excel_data(db, content, file.filename)
         
         return {
             "status": "success",

@@ -89,14 +89,18 @@ for i, row in df.iterrows():
     vec_id = str(row['vector_id'])
     metadata = {
         'policy_number': row.get('policy_number', ''),
+        'insured_name': row.get('insured_name', ''),
         'sum_insured': row.get('sum_insured', ''),
         'premium': row.get('premium', ''),
         'own_retention_ppn': row.get('own_retention_ppn', ''),
         'own_retention_sum_insured': row.get('own_retention_sum_insured', ''),
         'own_retention_premium': row.get('own_retention_premium', ''),
-        'treaty_retention_ppn': row.get('treaty_retention_ppn', ''),
+        'treaty_ppn': row.get('treaty_ppn', ''),  # Changed from treaty_retention_ppn
         'treaty_sum_insured': row.get('treaty_sum_insured', ''),
         'treaty_premium': row.get('treaty_premium', ''),
+        'facultative_outward_ppn': row.get('facultative_outward_ppn', ''),
+        'facultative_outward_sum_insured': row.get('facultative_outward_sum_insured', ''),
+        'facultative_outward_premium': row.get('facultative_outward_premium', ''),
         'insurance_period_start_date': str(row.get('insurance_period_start_date', '')),
         'insurance_period_end_date': str(row.get('insurance_period_end_date', ''))
     }

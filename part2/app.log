@@ -840,3 +840,276 @@ For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/er
 2025-08-30 23:49:31,208 [ERROR] Query processing error: InsuranceRAGSystem.__init__() takes 1 positional argument but 2 were given
 2025-08-31 00:03:18,182 [ERROR] Query processing error: InsuranceRAGSystem.__init__() takes 1 positional argument but 2 were given
 2025-08-31 00:07:00,371 [ERROR] Query processing error: InsuranceRAGSystem.__init__() takes 1 positional argument but 2 were given
+2025-08-31 20:25:32,046 [ERROR] Excel ingestion error: ingest_excel_data() missing 1 required positional argument: 'filename'
+2025-08-31 20:29:27,218 [ERROR] Error ingesting data: 400: Missing required columns: policy_number, sum_insured, premium, own_retention_ppn, own_retention_sum_insured, own_retention_premium, treaty_ppn, treaty_sum_insured, treaty_premium, insurance_period
+2025-08-31 21:06:25,956 [ERROR] Error ingesting data: 400: Missing required columns: policy_number, sum_insured, premium, own_retention_ppn, own_retention_sum_insured, own_retention_premium, treaty_ppn, treaty_sum_insured, treaty_premium, insurance_period
+2025-08-31 21:09:18,844 [ERROR] Error ingesting data: 400: Missing required columns: policy_number, sum_insured, premium, own_retention_ppn, own_retention_sum_insured, own_retention_premium, treaty_ppn, treaty_sum_insured, treaty_premium, insurance_period
+2025-09-01 21:23:01,192 [ERROR] Error ingesting data: 400: Missing required columns: policy_number, insured_name, sum_insured, premium, own_retention_ppn, own_retention_sum_insured, own_retention_premium, treaty_ppn, treaty_sum_insured, treaty_premium, facultative_outward_ppn, facultative_outward_sum_insured, facultative_outward_premium, insurance_period_start_date, insurance_period_end_date
+2025-09-01 21:32:04,506 [INFO] select pg_catalog.version()
+2025-09-01 21:32:04,507 [INFO] [raw sql] ()
+2025-09-01 21:32:05,488 [INFO] select current_schema()
+2025-09-01 21:32:05,489 [INFO] [raw sql] ()
+2025-09-01 21:32:06,421 [INFO] show standard_conforming_strings
+2025-09-01 21:32:06,440 [INFO] [raw sql] ()
+2025-09-01 21:32:07,225 [INFO] BEGIN (implicit)
+2025-09-01 21:32:07,233 [INFO] 
+                INSERT INTO insurance_policies 
+                (policy_number, sum_insured, premium, own_retention_ppn, 
+                 own_retention_sum_insured, own_retention_premium, treaty_ppn,
+                 treaty_sum_insured, treaty_premium, insurance_period_start_date, 
+                 insurance_period_end_date)
+                VALUES 
+                ($1, $2, $3, $4,
+                 $5, $6, $7,
+                 $8, $9, $10,
+                 $11)
+                ON CONFLICT (policy_number) DO UPDATE SET
+                sum_insured = EXCLUDED.sum_insured,
+                premium = EXCLUDED.premium,
+                own_retention_ppn = EXCLUDED.own_retention_ppn,
+                own_retention_sum_insured = EXCLUDED.own_retention_sum_insured,
+                own_retention_premium = EXCLUDED.own_retention_premium,
+                treaty_ppn = EXCLUDED.treaty_ppn,
+                treaty_sum_insured = EXCLUDED.treaty_sum_insured,
+                treaty_premium = EXCLUDED.treaty_premium,
+                insurance_period_start_date = EXCLUDED.insurance_period_start_date,
+                insurance_period_end_date = EXCLUDED.insurance_period_end_date
+            
+2025-09-01 21:32:07,252 [INFO] [generated in 0.01927s] ('', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, None, None)
+2025-09-01 21:32:07,953 [INFO] ROLLBACK
+2025-09-01 21:32:08,205 [ERROR] Error ingesting data: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.UndefinedColumnError'>: column "treaty_ppn" of relation "insurance_policies" does not exist
+[SQL: 
+                INSERT INTO insurance_policies 
+                (policy_number, sum_insured, premium, own_retention_ppn, 
+                 own_retention_sum_insured, own_retention_premium, treaty_ppn,
+                 treaty_sum_insured, treaty_premium, insurance_period_start_date, 
+                 insurance_period_end_date)
+                VALUES 
+                ($1, $2, $3, $4,
+                 $5, $6, $7,
+                 $8, $9, $10,
+                 $11)
+                ON CONFLICT (policy_number) DO UPDATE SET
+                sum_insured = EXCLUDED.sum_insured,
+                premium = EXCLUDED.premium,
+                own_retention_ppn = EXCLUDED.own_retention_ppn,
+                own_retention_sum_insured = EXCLUDED.own_retention_sum_insured,
+                own_retention_premium = EXCLUDED.own_retention_premium,
+                treaty_ppn = EXCLUDED.treaty_ppn,
+                treaty_sum_insured = EXCLUDED.treaty_sum_insured,
+                treaty_premium = EXCLUDED.treaty_premium,
+                insurance_period_start_date = EXCLUDED.insurance_period_start_date,
+                insurance_period_end_date = EXCLUDED.insurance_period_end_date
+            ]
+[parameters: ('', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, None, None)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2025-09-01 21:38:29,032 [INFO] select pg_catalog.version()
+2025-09-01 21:38:29,043 [INFO] [raw sql] ()
+2025-09-01 21:38:30,040 [INFO] select current_schema()
+2025-09-01 21:38:30,045 [INFO] [raw sql] ()
+2025-09-01 21:38:30,977 [INFO] show standard_conforming_strings
+2025-09-01 21:38:30,981 [INFO] [raw sql] ()
+2025-09-01 21:38:31,689 [INFO] BEGIN (implicit)
+2025-09-01 21:38:31,703 [INFO] 
+                INSERT INTO insurance_policies 
+                (policy_number, insured_name, sum_insured, premium, own_retention_ppn, 
+                 own_retention_sum_insured, own_retention_premium, treaty_retention_ppn,
+                 treaty_sum_insured, treaty_premium, facultative_outward_ppn,
+                 facultative_outward_sum_insured, facultative_outward_premium,
+                 insurance_period_start_date, insurance_period_end_date)
+                VALUES 
+                ($1, $2, $3, $4, $5,
+                 $6, $7, $8,
+                 $9, $10, $11,
+                 $12, $13,
+                 $14, $15)
+                ON CONFLICT (policy_number) DO UPDATE SET
+                insured_name = EXCLUDED.insured_name,
+                sum_insured = EXCLUDED.sum_insured,
+                premium = EXCLUDED.premium,
+                own_retention_ppn = EXCLUDED.own_retention_ppn,
+                own_retention_sum_insured = EXCLUDED.own_retention_sum_insured,
+                own_retention_premium = EXCLUDED.own_retention_premium,
+                treaty_retention_ppn = EXCLUDED.treaty_retention_ppn,
+                treaty_sum_insured = EXCLUDED.treaty_sum_insured,
+                treaty_premium = EXCLUDED.treaty_premium,
+                facultative_outward_ppn = EXCLUDED.facultative_outward_ppn,
+                facultative_outward_sum_insured = EXCLUDED.facultative_outward_sum_insured,
+                facultative_outward_premium = EXCLUDED.facultative_outward_premium,
+                insurance_period_start_date = EXCLUDED.insurance_period_start_date,
+                insurance_period_end_date = EXCLUDED.insurance_period_end_date
+            
+2025-09-01 21:38:31,738 [INFO] [generated in 0.03532s] ('', 'Unknown', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, None, None)
+2025-09-01 21:38:32,506 [INFO] ROLLBACK
+2025-09-01 21:38:32,737 [ERROR] Error ingesting data: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.UndefinedColumnError'>: column "insured_name" of relation "insurance_policies" does not exist
+[SQL: 
+                INSERT INTO insurance_policies 
+                (policy_number, insured_name, sum_insured, premium, own_retention_ppn, 
+                 own_retention_sum_insured, own_retention_premium, treaty_retention_ppn,
+                 treaty_sum_insured, treaty_premium, facultative_outward_ppn,
+                 facultative_outward_sum_insured, facultative_outward_premium,
+                 insurance_period_start_date, insurance_period_end_date)
+                VALUES 
+                ($1, $2, $3, $4, $5,
+                 $6, $7, $8,
+                 $9, $10, $11,
+                 $12, $13,
+                 $14, $15)
+                ON CONFLICT (policy_number) DO UPDATE SET
+                insured_name = EXCLUDED.insured_name,
+                sum_insured = EXCLUDED.sum_insured,
+                premium = EXCLUDED.premium,
+                own_retention_ppn = EXCLUDED.own_retention_ppn,
+                own_retention_sum_insured = EXCLUDED.own_retention_sum_insured,
+                own_retention_premium = EXCLUDED.own_retention_premium,
+                treaty_retention_ppn = EXCLUDED.treaty_retention_ppn,
+                treaty_sum_insured = EXCLUDED.treaty_sum_insured,
+                treaty_premium = EXCLUDED.treaty_premium,
+                facultative_outward_ppn = EXCLUDED.facultative_outward_ppn,
+                facultative_outward_sum_insured = EXCLUDED.facultative_outward_sum_insured,
+                facultative_outward_premium = EXCLUDED.facultative_outward_premium,
+                insurance_period_start_date = EXCLUDED.insurance_period_start_date,
+                insurance_period_end_date = EXCLUDED.insurance_period_end_date
+            ]
+[parameters: ('', 'Unknown', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, None, None)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2025-09-01 21:43:09,621 [INFO] BEGIN (implicit)
+2025-09-01 21:43:09,623 [INFO] 
+                INSERT INTO insurance_policies 
+                (policy_number, insured_name, sum_insured, premium, own_retention_ppn, 
+                 own_retention_sum_insured, own_retention_premium, treaty_retention_ppn,
+                 treaty_sum_insured, treaty_premium, facultative_outward_ppn,
+                 facultative_outward_sum_insured, facultative_outward_premium,
+                 insurance_period_start_date, insurance_period_end_date)
+                VALUES 
+                ($1, $2, $3, $4, $5,
+                 $6, $7, $8,
+                 $9, $10, $11,
+                 $12, $13,
+                 $14, $15)
+                ON CONFLICT (policy_number) DO UPDATE SET
+                insured_name = EXCLUDED.insured_name,
+                sum_insured = EXCLUDED.sum_insured,
+                premium = EXCLUDED.premium,
+                own_retention_ppn = EXCLUDED.own_retention_ppn,
+                own_retention_sum_insured = EXCLUDED.own_retention_sum_insured,
+                own_retention_premium = EXCLUDED.own_retention_premium,
+                treaty_retention_ppn = EXCLUDED.treaty_retention_ppn,
+                treaty_sum_insured = EXCLUDED.treaty_sum_insured,
+                treaty_premium = EXCLUDED.treaty_premium,
+                facultative_outward_ppn = EXCLUDED.facultative_outward_ppn,
+                facultative_outward_sum_insured = EXCLUDED.facultative_outward_sum_insured,
+                facultative_outward_premium = EXCLUDED.facultative_outward_premium,
+                insurance_period_start_date = EXCLUDED.insurance_period_start_date,
+                insurance_period_end_date = EXCLUDED.insurance_period_end_date
+            
+2025-09-01 21:43:09,638 [INFO] [cached since 277.9s ago] ('', 'Unknown', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, None, None)
+2025-09-01 21:43:10,349 [INFO] ROLLBACK
+2025-09-01 21:43:10,577 [ERROR] Error ingesting data: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.UndefinedColumnError'>: column "insured_name" of relation "insurance_policies" does not exist
+[SQL: 
+                INSERT INTO insurance_policies 
+                (policy_number, insured_name, sum_insured, premium, own_retention_ppn, 
+                 own_retention_sum_insured, own_retention_premium, treaty_retention_ppn,
+                 treaty_sum_insured, treaty_premium, facultative_outward_ppn,
+                 facultative_outward_sum_insured, facultative_outward_premium,
+                 insurance_period_start_date, insurance_period_end_date)
+                VALUES 
+                ($1, $2, $3, $4, $5,
+                 $6, $7, $8,
+                 $9, $10, $11,
+                 $12, $13,
+                 $14, $15)
+                ON CONFLICT (policy_number) DO UPDATE SET
+                insured_name = EXCLUDED.insured_name,
+                sum_insured = EXCLUDED.sum_insured,
+                premium = EXCLUDED.premium,
+                own_retention_ppn = EXCLUDED.own_retention_ppn,
+                own_retention_sum_insured = EXCLUDED.own_retention_sum_insured,
+                own_retention_premium = EXCLUDED.own_retention_premium,
+                treaty_retention_ppn = EXCLUDED.treaty_retention_ppn,
+                treaty_sum_insured = EXCLUDED.treaty_sum_insured,
+                treaty_premium = EXCLUDED.treaty_premium,
+                facultative_outward_ppn = EXCLUDED.facultative_outward_ppn,
+                facultative_outward_sum_insured = EXCLUDED.facultative_outward_sum_insured,
+                facultative_outward_premium = EXCLUDED.facultative_outward_premium,
+                insurance_period_start_date = EXCLUDED.insurance_period_start_date,
+                insurance_period_end_date = EXCLUDED.insurance_period_end_date
+            ]
+[parameters: ('', 'Unknown', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, None, None)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2025-09-01 21:49:09,693 [INFO] BEGIN (implicit)
+2025-09-01 21:49:09,695 [INFO] 
+                INSERT INTO insurance_policies 
+                (policy_number, insured_name, sum_insured, premium, own_retention_ppn, 
+                 own_retention_sum_insured, own_retention_premium, treaty_retention_ppn,
+                 treaty_sum_insured, treaty_premium, facultative_outward_ppn,
+                 facultative_outward_sum_insured, facultative_outward_premium,
+                 insurance_period_start_date, insurance_period_end_date)
+                VALUES 
+                ($1, $2, $3, $4, $5,
+                 $6, $7, $8,
+                 $9, $10, $11,
+                 $12, $13,
+                 $14, $15)
+                ON CONFLICT (policy_number) DO UPDATE SET
+                insured_name = EXCLUDED.insured_name,
+                sum_insured = EXCLUDED.sum_insured,
+                premium = EXCLUDED.premium,
+                own_retention_ppn = EXCLUDED.own_retention_ppn,
+                own_retention_sum_insured = EXCLUDED.own_retention_sum_insured,
+                own_retention_premium = EXCLUDED.own_retention_premium,
+                treaty_retention_ppn = EXCLUDED.treaty_retention_ppn,
+                treaty_sum_insured = EXCLUDED.treaty_sum_insured,
+                treaty_premium = EXCLUDED.treaty_premium,
+                facultative_outward_ppn = EXCLUDED.facultative_outward_ppn,
+                facultative_outward_sum_insured = EXCLUDED.facultative_outward_sum_insured,
+                facultative_outward_premium = EXCLUDED.facultative_outward_premium,
+                insurance_period_start_date = EXCLUDED.insurance_period_start_date,
+                insurance_period_end_date = EXCLUDED.insurance_period_end_date
+            
+2025-09-01 21:49:09,701 [INFO] [cached since 638s ago] ('', 'Unknown', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, None, None)
+2025-09-01 21:49:10,832 [INFO] ROLLBACK
+2025-09-01 21:49:11,058 [ERROR] Error ingesting data: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.UndefinedTableError'>: relation "insurance_policies" does not exist
+[SQL: 
+                INSERT INTO insurance_policies 
+                (policy_number, insured_name, sum_insured, premium, own_retention_ppn, 
+                 own_retention_sum_insured, own_retention_premium, treaty_retention_ppn,
+                 treaty_sum_insured, treaty_premium, facultative_outward_ppn,
+                 facultative_outward_sum_insured, facultative_outward_premium,
+                 insurance_period_start_date, insurance_period_end_date)
+                VALUES 
+                ($1, $2, $3, $4, $5,
+                 $6, $7, $8,
+                 $9, $10, $11,
+                 $12, $13,
+                 $14, $15)
+                ON CONFLICT (policy_number) DO UPDATE SET
+                insured_name = EXCLUDED.insured_name,
+                sum_insured = EXCLUDED.sum_insured,
+                premium = EXCLUDED.premium,
+                own_retention_ppn = EXCLUDED.own_retention_ppn,
+                own_retention_sum_insured = EXCLUDED.own_retention_sum_insured,
+                own_retention_premium = EXCLUDED.own_retention_premium,
+                treaty_retention_ppn = EXCLUDED.treaty_retention_ppn,
+                treaty_sum_insured = EXCLUDED.treaty_sum_insured,
+                treaty_premium = EXCLUDED.treaty_premium,
+                facultative_outward_ppn = EXCLUDED.facultative_outward_ppn,
+                facultative_outward_sum_insured = EXCLUDED.facultative_outward_sum_insured,
+                facultative_outward_premium = EXCLUDED.facultative_outward_premium,
+                insurance_period_start_date = EXCLUDED.insurance_period_start_date,
+                insurance_period_end_date = EXCLUDED.insurance_period_end_date
+            ]
+[parameters: ('', 'Unknown', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, None, None)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2025-09-01 22:00:43,931 [INFO] Running database migrations...
+2025-09-01 22:00:44,244 [ERROR] Migration error: password authentication failed for user "postgres"
+2025-09-01 22:00:44,246 [INFO] Application startup complete
+2025-09-01 22:01:14,188 [INFO] Running database migrations...
+2025-09-01 22:01:14,296 [ERROR] Migration error: password authentication failed for user "postgres"
+2025-09-01 22:01:14,297 [INFO] Application startup complete
+2025-09-01 22:01:32,074 [INFO] Running database migrations...
+2025-09-01 22:01:32,332 [ERROR] Migration error: password authentication failed for user "postgres"
+2025-09-01 22:01:32,363 [INFO] Application startup complete
+2025-09-01 22:01:55,074 [INFO] Running database migrations...
+2025-09-01 22:01:55,218 [ERROR] Migration error: password authentication failed for user "postgres"
+2025-09-01 22:01:55,220 [INFO] Application startup complete
