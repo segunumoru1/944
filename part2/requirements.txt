@@ -19,3 +19,4 @@ langchain-pinecone>=0.0.2
 langgraph>=0.0.26
 sqlalchemy>=2.0.23
 favicon==0.7.0
+psycopg2-binary==2.9.9
