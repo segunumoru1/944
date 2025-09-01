@@ -1,33 +1,34 @@
 import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.utils.data_processing import transform_excel_data
-from src.utils.validation import validate_excel_file, validate_insurance_data
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 import logging
 from io import BytesIO
+from ..services.pinecone_client import PineconeClient
+import uuid
 
 logger = logging.getLogger(__name__)
 
 async def ingest_excel_data(session: AsyncSession, file_content: bytes, filename: str):
-    """Process and ingest Excel data into database"""
+    """Process and ingest Excel data into database and vector store"""
     try:
-        # Validate Excel file
-        validate_excel_file(file_content, filename)
-        
         # Use BytesIO to handle file content
         file_io = BytesIO(file_content)
         
-        # Read Excel sheets - header at row 7 (0-indexed)
-        dfs = {}
+        # Load Excel file (all sheets)
         excel_file = pd.ExcelFile(file_io)
-        for sheet in excel_file.sheet_names:
-            dfs[sheet] = pd.read_excel(excel_file, sheet_name=sheet, header=0)
+        all_dfs = []
         
-        # Combine all sheets
-        df_combined = pd.concat(dfs.values(), ignore_index=True)
+        # Process each sheet
+        for sheet_name in excel_file.sheet_names:
+            # First row is often a header, so we'll use header=0
+            df = pd.read_excel(excel_file, sheet_name=sheet_name, header=0)
+            all_dfs.append(df)
         
-        # Column mapping - Excel column names to database column names
+        # Combine all dataframes
+        df_combined = pd.concat(all_dfs, ignore_index=True)
+        
+        # Rename columns - map Excel column names to database column names
         column_mapping = {
             "INSURED": "insured_name",
             "POLICY NUMBER": "policy_number",
@@ -35,7 +36,7 @@ async def ingest_excel_data(session: AsyncSession, file_content: bytes, filename
             "SUM INSURED": "sum_insured",
             "PREMIUM": "premium",
             "OWN RETENTION PPN": "own_retention_ppn",
-            "OWN RETENTION SUM INSURED": "own_retention_sum_insured", 
+            "OWN RETENTION SUM INSURED": "own_retention_sum_insured",
             "OWN RETENTION PREMIUM": "own_retention_premium",
             "TREATY PPN": "treaty_retention_ppn",
             "TREATY SUM INSURED": "treaty_sum_insured",
@@ -45,63 +46,96 @@ async def ingest_excel_data(session: AsyncSession, file_content: bytes, filename
             "FACULTATIVE OUTWARD PREMIUM": "facultative_outward_premium"
         }
         
-        # Rename columns based on mapping
-        df_combined.rename(columns=column_mapping, inplace=True)
+        # Only rename columns that exist
+        cols_to_rename = {k: v for k, v in column_mapping.items() if k in df_combined.columns}
+        df_combined.rename(columns=cols_to_rename, inplace=True)
         
-        # Process insurance period field
+        # Process insurance period into start and end dates
         if "insurance_period" in df_combined.columns:
-            # Split period into start and end dates
             df_combined[['insurance_period_start_date', 'insurance_period_end_date']] = df_combined['insurance_period'].str.split(' - ', expand=True)
-            
-            # Convert to datetime
             df_combined['insurance_period_start_date'] = pd.to_datetime(df_combined['insurance_period_start_date'], format='%d/%m/%Y')
             df_combined['insurance_period_end_date'] = pd.to_datetime(df_combined['insurance_period_end_date'], format='%d/%m/%Y')
             
-            # Drop original period column
-            df_combined.drop('insurance_period', axis=1, inplace=True)
+        # Generate vector IDs for new records
+        df_combined['vector_id'] = [str(uuid.uuid4()) for _ in range(len(df_combined))]
         
-        # Check if required columns exist in table before inserting
-        # First, check database table structure
-        table_structure_query = text("SELECT column_name FROM information_schema.columns WHERE table_name = 'insurance_policies'")
-        result = await session.execute(table_structure_query)
-        existing_columns = [row[0] for row in result.all()]
+        # Initialize Pinecone client
+        pinecone_client = PineconeClient()
+        await pinecone_client.init()
         
-        logger.info(f"Existing columns in database: {existing_columns}")
+        # Log the data we're about to insert
+        logger.info(f"Preparing to insert {len(df_combined)} records")
         
-        # Build insert statement dynamically based on existing columns
-        columns_to_insert = []
-        placeholders = []
-        update_statements = []
-        params = {}
+        # Keep track of successful inserts
+        successful_inserts = 0
         
-        # Add columns that exist in both dataframe and database
-        for idx, row in df_combined.iterrows():
-            row_params = {}
-            for col in df_combined.columns:
-                if col in existing_columns:
-                    if idx == 0:  # Only add column name and placeholder once
-                        columns_to_insert.append(col)
-                        placeholders.append(f":{col}")
-                        update_statements.append(f"{col} = EXCLUDED.{col}")
-                    row_params[col] = row.get(col)
-            
-            # Construct and execute insert statement
-            if columns_to_insert:
-                insert_stmt = text(f"""
-                    INSERT INTO insurance_policies 
-                    ({', '.join(columns_to_insert)})
-                    VALUES 
-                    ({', '.join(placeholders)})
-                    ON CONFLICT (policy_number) DO UPDATE SET
-                    {', '.join(update_statements)}
-                """)
+        # Process each row
+        for _, row in df_combined.iterrows():
+            try:
+                # Ensure policy_number is not null
+                policy_number = row.get('policy_number', '')
+                if not policy_number:
+                    logger.warning("Skipping row with empty policy_number")
+                    continue
+                    
+                # Debug: Log the row we're about to insert
+                logger.info(f"Inserting policy: {policy_number}")
                 
-                await session.execute(insert_stmt, row_params)
+                # Prepare values for database insertion
+                values = {col: row.get(col) for col in [
+                    'policy_number', 'insured_name', 'sum_insured', 'premium',
+                    'own_retention_ppn', 'own_retention_sum_insured', 'own_retention_premium',
+                    'treaty_retention_ppn', 'treaty_sum_insured', 'treaty_premium',
+                    'facultative_outward_ppn', 'facultative_outward_sum_insured', 
+                    'facultative_outward_premium', 'insurance_period_start_date',
+                    'insurance_period_end_date', 'vector_id'
+                ] if col in row}
+                
+                # Insert into database using parameterized query
+                columns = ', '.join(values.keys())
+                placeholders = ', '.join([f":{col}" for col in values.keys()])
+                update_clause = ', '.join([f"{col} = EXCLUDED.{col}" for col in values.keys() if col != 'policy_number'])
+                
+                query = f"""
+                INSERT INTO insurance_policies ({columns})
+                VALUES ({placeholders})
+                ON CONFLICT (policy_number) DO UPDATE SET {update_clause}
+                """
+                
+                await session.execute(text(query), values)
+                
+                # Generate embedding and store in Pinecone
+                policy_text = f"Policy {policy_number} for {row.get('insured_name', 'Unknown')} with sum insured {row.get('sum_insured', 0)} and premium {row.get('premium', 0)}"
+                
+                # Store in Pinecone
+                await pinecone_client.upsert_vector(
+                    row['vector_id'],
+                    policy_text,
+                    {
+                        'policy_number': str(row.get('policy_number', '')),
+                        'insured_name': str(row.get('insured_name', '')),
+                        'sum_insured': float(row.get('sum_insured', 0)),
+                        'premium': float(row.get('premium', 0))
+                    }
+                )
+                
+                successful_inserts += 1
+                
+            except Exception as e:
+                logger.error(f"Error processing row {_}: {str(e)}")
+                # Continue with next row instead of failing entirely
         
-        await session.commit()
-        return {"message": "Data ingested successfully", "records_processed": len(df_combined)}
+        # Commit the transaction if any records were processed
+        if successful_inserts > 0:
+            await session.commit()
+            logger.info(f"Successfully inserted {successful_inserts} records")
+            return {"status": "success", "message": "Data ingested successfully", "records_processed": successful_inserts}
+        else:
+            await session.rollback()
+            logger.error("No records were successfully processed")
+            raise HTTPException(status_code=500, detail="No records were successfully processed")
         
     except Exception as e:
         await session.rollback()
-        logger.error(f"Error ingesting data: {str(e)}")
+        logger.error(f"Error during data ingestion: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error ingesting data: {str(e)}")
