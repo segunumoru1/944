@@ -1,7 +1,7 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.services.ingestion import ingest_excel_data
 from src.database import get_db
+from src.services.ingestion import ingest_excel_data
 import logging
 
 router = APIRouter()
@@ -19,24 +19,31 @@ async def ingest_excel(
     - Returns: Ingestion summary with record count
     """
     try:
-        # Validate file type
-        if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
-            raise HTTPException(400, "Only Excel files are supported")
+        logger.info(f"Received file: {file.filename}")
         
         # Read file content
-        content = await file.read()
+        file_content = await file.read()
         
-        # Process and ingest data
-        result = await ingest_excel_data(db, content, file.filename)
+        # Process the Excel file
+        result = await ingest_excel_data(db, file_content, file.filename)
         
-        return {
-            "status": "success",
-            "message": result["message"],
-            "records_processed": result["records_processed"]
-        }
-    
-    except HTTPException:
-        raise
+        # Add explicit commit check
+        try:
+            # This is to verify if the commit happened
+            count_query = "SELECT COUNT(*) FROM insurance_policies"
+            count_result = await db.execute(count_query)
+            actual_count = count_result.scalar()
+            logger.info(f"Verified record count after ingestion: {actual_count}")
+            
+            if actual_count == 0:
+                logger.error("Data appears to be committed but no records found")
+                raise HTTPException(status_code=500, detail="Data ingestion failed - no records created")
+                
+        except Exception as e:
+            logger.error(f"Verification query failed: {str(e)}")
+        
+        return result
+        
     except Exception as e:
-        logger.error(f"Excel ingestion error: {str(e)}")
-        raise HTTPException(500, f"Failed to process Excel file: {str(e)}")
+        logger.error(f"Error processing file: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")

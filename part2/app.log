@@ -1199,3 +1199,5 @@ DETAIL:  Key (typname, typnamespace)=(insurance_policies, 2200) already exists.
 2025-09-01 22:40:07,580 [INFO] [cached since 830.9s ago] ()
 2025-09-01 22:40:07,588 [INFO] Existing columns in database: []
 2025-09-01 22:40:07,661 [INFO] COMMIT
+2025-09-01 23:21:38,195 [ERROR] SQL query error: An output parsing error occurred. In order to pass this error back to the agent and have it try again, pass `handle_parsing_errors=True` to the AgentExecutor. This is the error: Could not parse LLM output: `I don't know`
+For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/OUTPUT_PARSING_FAILURE 

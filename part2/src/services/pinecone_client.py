@@ -2,7 +2,7 @@ import os
 import uuid
 import pandas as pd
 import google.generativeai as genai
-import pinecone
+from pinecone import Pinecone, ServerlessSpec
 import logging
 from typing import Dict, List, Any, Optional
 import asyncio
@@ -28,6 +28,7 @@ class PineconeClient:
         self.api_key = os.environ.get("PINECONE_API_KEY", settings.PINECONE_API_KEY)
         self.index_name = os.environ.get("PINECONE_INDEX", INDEX_NAME)
         self.google_api_key = os.environ.get("GOOGLE_API_KEY", settings.GOOGLE_API_KEY)
+        self.pc = None
         self.index = None
         self.model = None
         
@@ -38,20 +39,22 @@ class PineconeClient:
             if not self.api_key:
                 logger.error("PINECONE_API_KEY environment variable not set")
                 raise ValueError("Pinecone API key not provided")
-                
-            pinecone.init(api_key=self.api_key)
+            
+            # Create Pinecone client instance    
+            self.pc = Pinecone(api_key=self.api_key)
             
             # Check if index exists, create if it doesn't
-            if self.index_name not in pinecone.list_indexes():
+            if self.index_name not in self.pc.list_indexes().names():
                 logger.info(f"Creating Pinecone index: {self.index_name}")
-                pinecone.create_index(
+                self.pc.create_index(
                     name=self.index_name,
                     dimension=EMBEDDING_DIMENSION,
-                    metric="cosine"
+                    metric="cosine",
+                    spec=ServerlessSpec(cloud="aws", region="us-west-2")
                 )
                 
             # Connect to index
-            self.index = pinecone.Index(self.index_name)
+            self.index = self.pc.Index(self.index_name)
             
             # Initialize Google AI for embeddings
             if not self.google_api_key:
@@ -88,7 +91,8 @@ class PineconeClient:
                 
             # Upsert to Pinecone
             self.index.upsert(
-                vectors=[(vector_id, embedding, metadata)]
+                vectors=[(vector_id, embedding, metadata)],
+                namespace='insurance_namespace'
             )
             
             logger.info(f"Successfully upserted vector {vector_id}")
@@ -108,7 +112,8 @@ class PineconeClient:
             results = self.index.query(
                 vector=query_embedding,
                 top_k=top_k,
-                include_metadata=True
+                include_metadata=True,
+                namespace='insurance_namespace'
             )
             
             return results.matches
@@ -140,7 +145,7 @@ def row_to_text(row):
         f"Own Retention PPN: {row.get('own_retention_ppn', '')}\n"
         f"Own Retention Sum Insured: {row.get('own_retention_sum_insured', '')}\n"
         f"Own Retention Premium: {row.get('own_retention_premium', '')}\n"
-        f"Treaty Retention PPN: {row.get('treaty_retention_ppn', '')}\n"
+        f"Treaty PPN: {row.get('treaty_ppn', '')}\n"
         f"Treaty Sum Insured: {row.get('treaty_sum_insured', '')}\n"
         f"Treaty Premium: {row.get('treaty_premium', '')}\n"
         f"Start Date: {row.get('insurance_period_start_date', '')}\n"
@@ -182,18 +187,19 @@ def index_database_records():
         
         # Step 6: Initialize Pinecone
         logger.info("Initializing Pinecone...")
-        pinecone.init(api_key=settings.PINECONE_API_KEY)
+        pc = Pinecone(api_key=settings.PINECONE_API_KEY)
         
         # Create index if it doesn't exist
-        if INDEX_NAME not in pinecone.list_indexes():
+        if INDEX_NAME not in pc.list_indexes().names():
             logger.info(f"Creating Pinecone index: {INDEX_NAME}")
-            pinecone.create_index(
+            pc.create_index(
                 name=INDEX_NAME,
                 dimension=EMBEDDING_DIMENSION,
-                metric='cosine'
+                metric='cosine',
+                spec=ServerlessSpec(cloud='aws', region='us-west-2')
             )
         
-        index = pinecone.Index(INDEX_NAME)
+        index = pc.Index(INDEX_NAME)
         
         # Step 7: Prepare data for upsert
         vectors = []
@@ -207,7 +213,7 @@ def index_database_records():
                 'own_retention_ppn': float(row.get('own_retention_ppn', 0)),
                 'own_retention_sum_insured': float(row.get('own_retention_sum_insured', 0)),
                 'own_retention_premium': float(row.get('own_retention_premium', 0)),
-                'treaty_retention_ppn': float(row.get('treaty_retention_ppn', 0)),
+                'treaty_ppn': float(row.get('treaty_ppn', 0)),
                 'treaty_sum_insured': float(row.get('treaty_sum_insured', 0)),
                 'treaty_premium': float(row.get('treaty_premium', 0)),
                 'insurance_period_start_date': str(row.get('insurance_period_start_date', '')),
@@ -222,11 +228,7 @@ def index_database_records():
             if 'facultative_outward_premium' in row:
                 metadata['facultative_outward_premium'] = float(row.get('facultative_outward_premium', 0))
             
-            vectors.append({
-                'id': vec_id,
-                'values': row['embedding'],
-                'metadata': metadata
-            })
+            vectors.append((vec_id, row['embedding'], metadata))
         
         # Step 8: Upsert vectors to Pinecone
         batch_size = 100
@@ -257,8 +259,8 @@ def query_rag(user_query, top_k=5):
     """Query the RAG system with natural language"""
     try:
         # Initialize Pinecone
-        pinecone.init(api_key=settings.PINECONE_API_KEY)
-        index = pinecone.Index(INDEX_NAME)
+        pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+        index = pc.Index(INDEX_NAME)
         
         # Generate embedding for query
         query_emb = get_embedding(user_query)
